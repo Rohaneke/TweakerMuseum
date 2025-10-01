@@ -6,6 +6,8 @@
     <title>The Tweaker Museum | Digital Arts Collection</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <script src="p5rohan.js"></script>
+    <script src="javascript.js"></script>
 </head>
 <body>
     <header class="museum-header">
@@ -91,38 +93,5 @@
             </div>
         </div>
     </footer>
-
-    <script src="p5rohan.js"></script>
-    <script>
-        // Override the p5.js setup to attach to specific div
-        let originalCreateCanvas = createCanvas;
-        window.createCanvas = function(w, h) {
-            let canvas = originalCreateCanvas(w, h);
-            canvas.parent('p5-canvas');
-            return canvas;
-        };
-        
-        // Ensure the canvas resizes properly within the hero section
-        function windowResized() {
-            let heroSection = document.querySelector('.hero-section');
-            if (heroSection) {
-                resizeCanvas(heroSection.offsetWidth, heroSection.offsetHeight);
-                background(bgColor);
-                setupFieldAndParticles();
-            }
-        }
-        
-        // Override the original setup to use hero section dimensions
-        let originalSetup = setup;
-        window.setup = function() {
-            pixelDensity(Math.min(1, window.devicePixelRatio));
-            
-            let heroSection = document.querySelector('.hero-section');
-            createCanvas(heroSection.offsetWidth, heroSection.offsetHeight);
-            colorMode(HSB, 360, 100, 100, 1);
-            
-            resetSketch(true);
-        };
-    </script>
 </body>
 </html>
