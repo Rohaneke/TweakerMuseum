@@ -5,6 +5,274 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        /* Loading Screen Animations */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 50%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .museum-logo {
+            margin-bottom: 3rem;
+        }
+
+        .logo-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #d4af37;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+            animation: fadeInUp 1.2s ease-out;
+        }
+
+        .logo-subtitle {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #ccc;
+            letter-spacing: 2px;
+            animation: fadeInUp 1.2s ease-out 0.3s both;
+        }
+
+        .loading-animation {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .loading-particles {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .particle {
+            width: 8px;
+            height: 8px;
+            background: #d4af37;
+            border-radius: 50%;
+            animation: particleFloat 2s ease-in-out infinite;
+        }
+
+        .particle:nth-child(2) { animation-delay: 0.2s; }
+        .particle:nth-child(3) { animation-delay: 0.4s; }
+        .particle:nth-child(4) { animation-delay: 0.6s; }
+        .particle:nth-child(5) { animation-delay: 0.8s; }
+
+        .loading-text {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 1rem;
+            color: #999;
+            letter-spacing: 1px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .main-wrapper {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        .main-wrapper.loaded {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Scroll Progress Indicator */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(212, 175, 55, 0.2);
+            z-index: 9999;
+        }
+
+        .scroll-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f4d03f);
+            width: 0%;
+            transition: width 0.1s ease;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Floating Action Button */
+        .floating-reset {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #d4af37, #f4d03f);
+            border: none;
+            border-radius: 50%;
+            color: #1a1a1a;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            animation: floatButton 3s ease-in-out infinite;
+        }
+
+        .floating-reset:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(212, 175, 55, 0.5);
+        }
+
+        .floating-reset:active {
+            transform: scale(0.95);
+        }
+
+        .reset-icon {
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .floating-reset:hover .reset-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Interaction Hint */
+        .interaction-hint {
+            margin-top: 2rem;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease-out 2s both;
+        }
+
+        .click-indicator {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            animation: pulseGlow 2s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Regeneration Notification */
+        .regen-notification {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(212, 175, 55, 0.95);
+            color: #1a1a1a;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            transition: all 0.5s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .regen-notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Enhanced Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes particleFloat {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+                opacity: 0.7;
+            }
+            50% {
+                transform: translateY(-20px) scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.6;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% {
+                border-color: rgba(255, 255, 255, 0.3);
+                box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+            }
+            50% {
+                border-color: rgba(255, 255, 255, 0.6);
+                box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        @keyframes floatButton {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                transform: translateX(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInFromLeft {
+            from {
+                transform: translateX(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
         
         body {
             font-family: 'Source Sans Pro', sans-serif;
@@ -122,65 +390,119 @@
             background: white;
             padding: 4rem 2rem;
             text-align: center;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
         }
-        
+
+        .exhibition-info.animate-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .exhibition-content {
             max-width: 800px;
             margin: 0 auto;
         }
-        
+
         .section-title {
             font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
             color: #1a1a1a;
             margin-bottom: 1.5rem;
             font-weight: 400;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease 0.2s;
         }
-        
+
+        .exhibition-info.animate-in .section-title {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .section-subtitle {
             font-size: 1.1rem;
             color: #666;
             margin-bottom: 2rem;
             font-weight: 300;
             letter-spacing: 0.5px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease 0.4s;
         }
-        
+
+        .exhibition-info.animate-in .section-subtitle {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .description {
             font-size: 1rem;
             line-height: 1.8;
             color: #444;
             margin-bottom: 3rem;
             text-align: left;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease 0.6s;
         }
-        
+
+        .exhibition-info.animate-in .description {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .controls-info {
             background: #f8f8f8;
             border: 1px solid #e0e0e0;
             padding: 2rem;
             border-radius: 8px;
             margin: 2rem 0;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease 0.8s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
-        
+
+        .exhibition-info.animate-in .controls-info {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .controls-info:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+
         .controls-title {
             font-family: 'Playfair Display', serif;
             font-size: 1.3rem;
             margin-bottom: 1rem;
             color: #1a1a1a;
         }
-        
+
         .controls-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             text-align: left;
         }
-        
+
         .control-item {
             display: flex;
             align-items: center;
             gap: 0.8rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
         }
-        
+
+        .control-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(5px);
+        }
+
         .control-key {
             background: #1a1a1a;
             color: white;
@@ -190,31 +512,61 @@
             font-size: 0.9rem;
             min-width: 2rem;
             text-align: center;
+            transition: all 0.3s ease;
         }
-        
+
+        .control-item:hover .control-key {
+            background: #d4af37;
+            color: #1a1a1a;
+            transform: scale(1.05);
+        }
+
         .artist-info {
             background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             color: white;
             padding: 4rem 2rem;
             text-align: center;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
         }
-        
+
+        .artist-info.animate-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .artist-content {
             max-width: 600px;
             margin: 0 auto;
         }
-        
+
         .artist-name {
             font-family: 'Playfair Display', serif;
             font-size: 2rem;
             margin-bottom: 1rem;
             color: #d4af37;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease 0.3s;
         }
-        
+
+        .artist-info.animate-in .artist-name {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .artist-bio {
             font-size: 1rem;
             line-height: 1.7;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease 0.5s;
+        }
+
+        .artist-info.animate-in .artist-bio {
             opacity: 0.9;
+            transform: translateY(0);
         }
         
         .museum-footer {
