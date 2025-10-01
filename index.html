@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tweaker Museum | Digital Arts Collection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+Pro:wght@300;400;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            line-height: 1.6;
+            color: #2c2c2c;
+            background-color: #fafafa;
+        }
+        
+        .museum-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e0e0e0;
+            padding: 1rem 2rem;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .museum-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: -0.5px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav-menu a {
+            text-decoration: none;
+            color: #555;
+            font-weight: 400;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-menu a:hover {
+            color: #1a1a1a;
+        }
+        
+        .main-content {
+            margin-top: 80px;
+        }
+        
+        .hero-section {
+            position: relative;
+            height: 70vh;
+            min-height: 500px;
+            overflow: hidden;
+            border-bottom: 3px solid #d4af37;
+        }
+        
+        #p5-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.3) 0%, rgba(26, 26, 26, 0.1) 50%, rgba(26, 26, 26, 0.2) 100%);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero-text {
+            text-align: center;
+            color: white;
+            z-index: 3;
+            max-width: 600px;
+            padding: 2rem;
+        }
+        
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            letter-spacing: -1px;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            font-weight: 300;
+            opacity: 0.9;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        .exhibition-info {
+            background: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        
+        .exhibition-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+        }
+        
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        
+        .description {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 3rem;
+            text-align: left;
+        }
+        
+        .controls-info {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        
+        .controls-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        
+        .controls-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            text-align: left;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .control-key {
+            background: #1a1a1a;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            min-width: 2rem;
+            text-align: center;
+        }
+        
+        .artist-info {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        
+        .artist-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .artist-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #d4af37;
+        }
+        
+        .artist-bio {
+            font-size: 1rem;
+            line-height: 1.7;
+            opacity: 0.9;
+        }
+        
+        .museum-footer {
+            background: #1a1a1a;
+            color: #ccc;
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .footer-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: #d4af37;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-info {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .museum-header {
+                padding: 1rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-menu {
+                gap: 1rem;
+            }
+            
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+            
+            .main-content {
+                margin-top: 120px;
+            }
+            
+            .controls-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="museum-header">
+        <div class="header-content">
+            <h1 class="museum-title">The Tweaker Museum</h1>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="#exhibition">Exhibition</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#artist">Artist</a></li>
+                    <li><a href="#visit">Visit</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="hero-section">
+            <div id="p5-canvas"></div>
+            <div class="hero-overlay">
+                <div class="hero-text">
+                    <h2 class="hero-title">Flow Fields</h2>
+                    <p class="hero-subtitle">An Interactive Digital Art Experience</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="exhibition" class="exhibition-info">
+            <div class="exhibition-content">
+                <h3 class="section-title">Current Exhibition</h3>
+                <p class="section-subtitle">Digital Abstractions in Motion</p>
+                
+                <div class="description">
+                    <p>Experience the mesmerizing beauty of computational art through our featured Flow Fields installation. This interactive piece demonstrates the elegant intersection of mathematics, physics, and visual aesthetics, creating an ever-evolving landscape of color and movement.</p>
+                    
+                    <p>Using Perlin noise algorithms and particle systems, the artwork generates infinite variations of flowing, organic patterns that respond to natural forces. Each viewing presents a unique composition, making every moment a singular artistic experience.</p>
+                </div>
+
+                <div class="controls-info">
+                    <h4 class="controls-title">Interactive Controls</h4>
+                    <div class="controls-list">
+                        <div class="control-item">
+                            <span class="control-key">Click</span>
+                            <span>Generate new composition</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-key">S</span>
+                            <span>Save current frame</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-key">C</span>
+                            <span>Clear trails</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-key">F</span>
+                            <span>Toggle fade trails</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="control-key">R</span>
+                            <span>Reset composition</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="artist" class="artist-info">
+            <div class="artist-content">
+                <h3 class="artist-name">Digital Artist Collective</h3>
+                <p class="artist-bio">
+                    This piece represents the convergence of traditional artistic principles with cutting-edge digital techniques. Through careful manipulation of algorithmic processes, the artist creates works that bridge the gap between computational precision and organic beauty, inviting viewers to contemplate the hidden patterns that govern our natural world.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="museum-footer">
+        <div class="footer-content">
+            <h4 class="footer-title">The Tweaker Museum</h4>
+            <p>Dedicated to the exploration and preservation of digital art and interactive media.</p>
+            <div class="footer-info">
+                <p>&copy; 2025 The Tweaker Museum. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="p5rohan.js"></script>
+    <script>
+        // Override the p5.js setup to attach to specific div
+        let originalCreateCanvas = createCanvas;
+        window.createCanvas = function(w, h) {
+            let canvas = originalCreateCanvas(w, h);
+            canvas.parent('p5-canvas');
+            return canvas;
+        };
+        
+        // Ensure the canvas resizes properly within the hero section
+        function windowResized() {
+            let heroSection = document.querySelector('.hero-section');
+            if (heroSection) {
+                resizeCanvas(heroSection.offsetWidth, heroSection.offsetHeight);
+                background(bgColor);
+                setupFieldAndParticles();
+            }
+        }
+        
+        // Override the original setup to use hero section dimensions
+        let originalSetup = setup;
+        window.setup = function() {
+            pixelDensity(Math.min(1, window.devicePixelRatio));
+            
+            let heroSection = document.querySelector('.hero-section');
+            createCanvas(heroSection.offsetWidth, heroSection.offsetHeight);
+            colorMode(HSB, 360, 100, 100, 1);
+            
+            resetSketch(true);
+        };
+    </script>
+</body>
+</html>
