@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Original Remix Spinoff — Cinematic + Energy + Sidechain</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.js"></script>
+  </head>
+  <body
+    style="
+      background: black;
+      color: white;
+      text-align: center;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    "
+  >
+    <canvas
+      id="visualizer"
+      style="position: absolute; top: 0; left: 0; z-index: 1"
+    ></canvas>
+    <div style="position: relative; z-index: 2; padding: 20px">
+      <h1>type shitttt</h1>
+      <button id="start">Start Remix</button>
+    </div>
+
+    <script>
+      // Hyperspace visualizer setup
+      const canvas = document.getElementById("visualizer");
+      const ctx = canvas.getContext("2d");
+      let analyzer;
+      let stars = [];
+      let speed = 0.5;
+      let bassEnergy = 0;
+
+      // Spaceship controls
+      const spaceship = {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        size: 20,
+        thrust: 0,
+      };
+
+      const keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      };
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      // Keyboard controls
+      document.addEventListener("keydown", (e) => {
+        switch (e.key.toLowerCase()) {
+          case "w":
+          case "arrowup":
+            keys.up = true;
+            e.preventDefault();
+            break;
+          case "s":
+          case "arrowdown":
+            keys.down = true;
+            e.preventDefault();
+            break;
+          case "a":
+          case "arrowleft":
+            keys.left = true;
+            e.preventDefault();
+            break;
+          case "d":
+          case "arrowright":
+            keys.right = true;
+            e.preventDefault();
+            break;
+        }
+      });
+
+      document.addEventListener("keyup", (e) => {
+        switch (e.key.toLowerCase()) {
+          case "w":
+          case "arrowup":
+            keys.up = false;
+            break;
+          case "s":
+          case "arrowdown":
+            keys.down = false;
+            break;
+          case "a":
+          case "arrowleft":
+            keys.left = false;
+            break;
+          case "d":
+          case "arrowright":
+            keys.right = false;
+            break;
+        }
+      });
+
+      // Star class for hyperspace effect
+      class Star {
+        constructor() {
+          this.reset();
+          this.z = Math.random() * 1000; // Random starting depth
+        }
+
+        reset() {
+          this.x = (Math.random() - 0.5) * 2000;
+          this.y = (Math.random() - 0.5) * 2000;
+          this.z = 1000;
+          this.prevX = 0;
+          this.prevY = 0;
+        }
+
+        update() {
+          // Apply spaceship movement to star positions for parallax effect
+          this.x += spaceship.vx * 2;
+          this.y += spaceship.vy * 2;
+
+          this.prevX =
+            (((this.x - spaceship.x) / this.z) * canvas.width) / 2 +
+            canvas.width / 2;
+          this.prevY =
+            (((this.y - spaceship.y) / this.z) * canvas.height) / 2 +
+            canvas.height / 2;
+
+          this.z -= speed * (1 + bassEnergy * 5);
+
+          if (this.z <= 0) {
+            this.reset();
+          }
+        }
+
+        draw() {
+          const x =
+            (((this.x - spaceship.x) / this.z) * canvas.width) / 2 +
+            canvas.width / 2;
+          const y =
+            (((this.y - spaceship.y) / this.z) * canvas.height) / 2 +
+            canvas.height / 2;
+
+          const opacity = (1000 - this.z) / 1000;
+          const size = ((1000 - this.z) / 1000) * 3;
+
+          if (x >= 0 && x <= canvas.width && y >= 0 && y <= canvas.height) {
+            // Draw star trail
+            ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+            ctx.lineWidth = size;
+            ctx.beginPath();
+            ctx.moveTo(this.prevX, this.prevY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            // Draw star point
+            ctx.fillStyle = `rgba(100, 200, 255, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Initialize stars
+      for (let i = 0; i < 800; i++) {
+        stars.push(new Star());
+      }
+
+      function updateSpaceship() {
+        // Handle thrust and movement
+        spaceship.thrust = 0;
+
+        if (keys.up) {
+          spaceship.vy -= 0.5;
+          spaceship.thrust = 1;
+        }
+        if (keys.down) {
+          spaceship.vy += 0.5;
+          spaceship.thrust = 1;
+        }
+        if (keys.left) {
+          spaceship.vx -= 0.5;
+          spaceship.thrust = 1;
+        }
+        if (keys.right) {
+          spaceship.vx += 0.5;
+          spaceship.thrust = 1;
+        }
+
+        // Apply friction
+        spaceship.vx *= 0.95;
+        spaceship.vy *= 0.95;
+
+        // Limit velocity
+        const maxVel = 8;
+        spaceship.vx = Math.max(-maxVel, Math.min(maxVel, spaceship.vx));
+        spaceship.vy = Math.max(-maxVel, Math.min(maxVel, spaceship.vy));
+
+        // Update position
+        spaceship.x += spaceship.vx;
+        spaceship.y += spaceship.vy;
+      }
+
+      function drawSpaceship() {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+
+        // Spaceship body (triangle pointing up)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.beginPath();
+        ctx.moveTo(0, -spaceship.size);
+        ctx.lineTo(-spaceship.size * 0.6, spaceship.size * 0.8);
+        ctx.lineTo(spaceship.size * 0.6, spaceship.size * 0.8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Spaceship outline
+        ctx.strokeStyle = "rgba(100, 200, 255, 1)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Engine glow when thrusting
+        if (spaceship.thrust > 0) {
+          const glowSize = spaceship.size * 1.5;
+          const gradient = ctx.createRadialGradient(
+            0,
+            spaceship.size,
+            0,
+            0,
+            spaceship.size,
+            glowSize
+          );
+          gradient.addColorStop(0, "rgba(100, 200, 255, 0.8)");
+          gradient.addColorStop(0.5, "rgba(255, 100, 100, 0.4)");
+          gradient.addColorStop(1, "rgba(255, 100, 100, 0)");
+
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(0, spaceship.size, glowSize, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Engine flames
+          ctx.fillStyle = "rgba(255, 150, 50, 0.8)";
+          ctx.beginPath();
+          ctx.moveTo(-8, spaceship.size);
+          ctx.lineTo(0, spaceship.size + 15);
+          ctx.lineTo(8, spaceship.size);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function drawHyperspace() {
+        // Clear with black background
+        ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (analyzer) {
+          // Get frequency data for bass energy
+          const frequencyData = analyzer.getValue();
+          const bassFreqs = Object.values(frequencyData).slice(0, 8);
+          bassEnergy = Math.max(0, Math.max(...bassFreqs) + 60) / 60;
+
+          // Adjust speed based on music intensity and thrust
+          speed = 2 + bassEnergy * 8 + spaceship.thrust * 2;
+        }
+
+        // Update spaceship
+        updateSpaceship();
+
+        // Update and draw all stars
+        stars.forEach((star) => {
+          star.update();
+          star.draw();
+        });
+
+        // Draw spaceship
+        drawSpaceship();
+
+        // Add center glow effect on bass hits
+        if (bassEnergy > 0.3) {
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const glowSize = bassEnergy * 200;
+
+          const gradient = ctx.createRadialGradient(
+            centerX,
+            centerY,
+            0,
+            centerX,
+            centerY,
+            glowSize
+          );
+          gradient.addColorStop(0, `rgba(100, 200, 255, ${bassEnergy * 0.3})`);
+          gradient.addColorStop(1, "rgba(100, 200, 255, 0)");
+
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Draw controls hint
+        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(
+          "Use WASD or Arrow Keys to pilot your ship",
+          20,
+          canvas.height - 20
+        );
+
+        requestAnimationFrame(drawHyperspace);
+      }
+
+      const startBtn = document.getElementById("start");
+      startBtn.addEventListener("click", async () => {
+        await Tone.start();
+        startBtn.style.display = "none";
+
+        // Setup analyzer for visualization
+        analyzer = new Tone.Analyser("fft", 64);
+        Tone.getDestination().connect(analyzer);
+
+        // Setup analyzers for visualization
+        analyzer = new Tone.Analyser("fft", 64);
+        kickAnalyzer = new Tone.Analyser("fft", 32);
+
+        // Connect master output to analyzer
+        Tone.getDestination().connect(analyzer);
+
+        Tone.Transport.bpm.value = 78;
+        Tone.Transport.timeSignature = [4, 4];
+
+        // 🔸 SIDECHAIN SETUP
+        const sidechainCompressor = new Tone.Compressor({
+          threshold: -30,
+          ratio: 6,
+          attack: 0.01,
+          release: 0.3,
+        }).toDestination();
+
+        const reverb = new Tone.Reverb({ decay: 6, wet: 0.4 }).connect(
+          sidechainCompressor
+        );
+        const delay = new Tone.FeedbackDelay("8n", 0.3).connect(reverb);
+
+        // --- PAD ---
+        const pad = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sine" },
+          envelope: { attack: 4, release: 6 },
+        }).connect(reverb);
+
+        const padChords = [
+          ["A3", "E4", "G4"],
+          ["F3", "C4", "E4"],
+          ["D3", "A3", "F4"],
+          ["E3", "B3", "G4"],
+        ];
+
+        const padPart = new Tone.Part(
+          (time, chord) => {
+            pad.triggerAttackRelease(chord, "2m", time);
+          },
+          [
+            ["0:0:0", padChords[0]],
+            ["2:0:0", padChords[1]],
+            ["4:0:0", padChords[2]],
+            ["6:0:0", padChords[3]],
+          ]
+        );
+        padPart.loop = true;
+        padPart.loopEnd = "8m";
+
+        // --- ARP ---
+        const arp = new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.2, decay: 0.1, sustain: 0.4, release: 1.5 },
+        }).connect(delay);
+
+        const arpNotes = ["A4", "C5", "E5", "G4"];
+        const arpPattern = new Tone.Pattern(
+          (time, note) => {
+            arp.triggerAttackRelease(note, "8n", time);
+          },
+          arpNotes,
+          "upDown"
+        );
+        arpPattern.interval = "8n";
+
+        // --- BASS ---
+        const bass = new Tone.MonoSynth({
+          oscillator: { type: "square" },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.7, release: 0.8 },
+          filterEnvelope: { baseFrequency: 200, octaves: 1.5 },
+        }).connect(reverb);
+
+        const bassLine = new Tone.Sequence(
+          (time, note) => {
+            if (note) bass.triggerAttackRelease(note, "4n", time);
+          },
+          ["A1", null, "F1", null, "D1", null, "E1", null],
+          "2n"
+        );
+
+        // --- KICK ---
+        const kick = new Tone.MembraneSynth({
+          pitchDecay: 0.05,
+          octaves: 4,
+          envelope: { attack: 0.001, decay: 0.4, sustain: 0.01 },
+        }).toDestination();
+
+        // Connect kick to separate analyzer for beat detection
+        kick.connect(kickAnalyzer);
+
+        const kickLoop = new Tone.Loop((time) => {
+          kick.triggerAttackRelease("C1", "8n", time);
+          // Sidechain pump: trigger gain duck
+          sidechainGain.gain.cancelScheduledValues(time);
+          sidechainGain.gain.setValueAtTime(0.2, time);
+          sidechainGain.gain.linearRampToValueAtTime(1, time + 0.4);
+
+          // Create visual burst on kick
+          Tone.Transport.scheduleOnce(() => {
+            createParticles(canvas.width / 2, canvas.height / 2, 15);
+          }, time);
+        }, "1m");
+
+        // --- SIDECHAIN GAIN NODE ---
+        const sidechainGain = new Tone.Gain(1).connect(sidechainCompressor);
+        pad.connect(sidechainGain);
+        arp.connect(sidechainGain);
+
+        // --- ENERGETIC SECTION ---
+        // Warmer mid-range lead synth
+        const leadFilter = new Tone.Filter(800, "lowpass").connect(
+          sidechainGain
+        );
+        const lead = new Tone.Synth({
+          oscillator: { type: "square" },
+          envelope: { attack: 0.05, decay: 0.1, sustain: 0.6, release: 0.5 },
+        }).connect(leadFilter);
+
+        const leadMelody = new Tone.Sequence(
+          (time, note) => {
+            if (note) lead.triggerAttackRelease(note, "8n", time);
+          },
+          ["A3", "C4", "E4", "C4", "G3", "C4", "E4", "G3"],
+          "8n"
+        );
+
+        // Saw pad with lowpass filter automation
+        const sawFilter = new Tone.Filter(200, "lowpass").connect(
+          sidechainGain
+        );
+        const sawPad = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.5, release: 2 },
+        }).connect(sawFilter);
+
+        const sawPattern = new Tone.Loop((time) => {
+          sawPad.triggerAttackRelease(["A2", "E3", "C4"], "1m", time);
+        }, "1m");
+
+        // Rising filter automation
+        const filterLFO = new Tone.LFO({
+          frequency: "4m",
+          min: 400,
+          max: 4000,
+        })
+          .connect(sawFilter.frequency)
+          .start();
+
+        // Snare build
+        const snare = new Tone.NoiseSynth({
+          noise: { type: "white" },
+          envelope: { attack: 0.001, decay: 0.2, sustain: 0 },
+        }).toDestination();
+
+        const snareBuild = new Tone.Loop((time) => {
+          snare.triggerAttackRelease("8n", time);
+        }, "4n");
+
+        // Hi-hats
+        const hat = new Tone.MetalSynth({
+          frequency: 200,
+          envelope: { attack: 0.001, decay: 0.1, release: 0.1 },
+          harmonicity: 5.1,
+          modulationIndex: 32,
+        }).toDestination();
+
+        const hatLoop = new Tone.Loop((time) => {
+          hat.triggerAttackRelease("16n", time);
+        }, "8n");
+
+        // --- TIMING ---
+        padPart.start(0);
+        setTimeout(() => arpPattern.start(0), 4000);
+        setTimeout(() => bassLine.start(0), 8000);
+        setTimeout(() => kickLoop.start(0), 16000);
+
+        // Energetic section at 32s
+        setTimeout(() => {
+          leadMelody.start(0);
+          sawPattern.start(0);
+          snareBuild.start(0);
+          hatLoop.start(0);
+        }, 32000);
+
+        // Start hyperspace visualizer
+        drawHyperspace();
+
+        Tone.Transport.start();
+      });
+    </script>
+  </body>
+</html>
