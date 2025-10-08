@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classic Plinko | The Tweaker Museum</title>
+<script src="https://unpkg.com/tone@next/build/Tone.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(180deg, #1a5490 0%, #0d2942 100%);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    transition: all 0.5s ease;
+  }
+  
+  body.chinese-mode {
+    background: linear-gradient(180deg, #c41e3a 0%, #8b0000 100%);
+  }
+  
+  .game-title {
+    font-family: 'Bungee', cursive;
+    font-size: 4rem;
+    color: #ffd700;
+    text-shadow: 4px 4px 0px #ff6b00, 8px 8px 0px rgba(0,0,0,0.3);
+    margin: 20px 0;
+    text-align: center;
+    letter-spacing: 4px;
+  }
+  
+  .score-display {
+    font-size: 2rem;
+    color: #ffd700;
+    font-weight: bold;
+    margin: 20px 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .game-board {
+    position: relative;
+    background: linear-gradient(180deg, #8B4513 0%, #654321 100%);
+    border: 10px solid #D4A76A;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 2px 10px rgba(255,255,255,0.2);
+    padding: 20px;
+  }
+  
+  canvas {
+    display: block;
+    border: 5px solid #4a2511;
+    border-radius: 10px;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+    cursor: pointer;
+  }
+  
+  .instructions {
+    text-align: center;
+    font-size: 1.2rem;
+    margin: 20px 0;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .slots-display {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .slot-value {
+    background: linear-gradient(180deg, #ff6b00 0%, #c41e3a 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1.5rem;
+    border: 3px solid #ffd700;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    min-width: 60px;
+    text-align: center;
+  }
+  
+  /* Secret Button - Hidden in corner */
+  .secret-button {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    opacity: 0.1;
+    transition: opacity 0.3s;
+  }
+  
+  .secret-button:hover {
+    opacity: 0.5;
+  }
+  
+  @media (max-width: 768px) {
+    .game-title {
+      font-size: 2.5rem;
+    }
+    
+    canvas {
+      max-width: 100%;
+    }
+  }
+  
+  /* Navigation Header */
+  .nav-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    border-bottom: 2px solid #ffd700;
+  }
+  
+  .nav-logo {
+    font-family: 'Bungee', cursive;
+    font-size: 1.2rem;
+    color: #ffd700;
+    text-decoration: none;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 30px;
+    list-style: none;
+  }
+  
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    padding: 8px 16px;
+    border-radius: 5px;
+  }
+  
+  .nav-links a:hover {
+    color: #ffd700;
+    background: rgba(255, 215, 0, 0.1);
+  }
+  
+  /* Adjust body padding for fixed header */
+  body {
+    padding-top: 80px;
+  }
+</style>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <nav class="nav-header">
+    <a href="/" class="nav-logo">The Tweaker Museum</a>
+    <ul class="nav-links">
+      <li><a href="/">← Home</a></li>
+      <li><a href="/carousel/">Carousel</a></li>
+      <li><a href="/tonejsrohan.html">Plinko</a></li>
+    </ul>
+  </nav>
+
+  <h1 class="game-title" id="gameTitle">PLINKO</h1>
+  <div class="score-display">
+    <span id="scoreLabel">Score:</span> <span id="score">0</span>
+  </div>
+  
+  <p class="instructions" id="instructions">
+    Click anywhere at the top to drop a chip!
+  </p>
+  
+  <div class="game-board">
+    <canvas id="plinkoCanvas" width="600" height="700"></canvas>
+  </div>
+  
+  <div class="slots-display" id="slotsDisplay"></div>
+  
+  <!-- Secret Button -->
+  <button class="secret-button" id="secretBtn" title="🇨🇳"></button>
+
+<script>
+// Classic Plinko Game with Violin Sounds
+const canvas = document.getElementById('plinkoCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const slotsDisplay = document.getElementById('slotsDisplay');
+const secretBtn = document.getElementById('secretBtn');
+const gameTitle = document.getElementById('gameTitle');
+const scoreLabel = document.getElementById('scoreLabel');
+const instructions = document.getElementById('instructions');
+
+let audioStarted = false;
+let score = 0;
+let chineseMode = false;
+let backgroundMusic = null;
+
+// Chinese mode translations
+const translations = {
+  en: {
+    title: 'PLINKO',
+    scoreLabel: 'Score:',
+    instructions: 'Click anywhere at the top to drop a chip!'
+  },
+  zh: {
+    title: '普林科',
+    scoreLabel: '得分：',
+    instructions: '点击顶部区域投下筹码！'
+  }
+};
+
+// Violin synthesis using Tone.js
+const violinSynth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: {
+    type: 'sawtooth'
+  },
+  envelope: {
+    attack: 0.02,
+    decay: 0.1,
+    sustain: 0.3,
+    release: 0.8
+  },
+  filter: {
+    type: 'lowpass',
+    frequency: 3000,
+    rolloff: -12
+  }
+}).toDestination();
+
+// Add vibrato for violin effect
+const vibrato = new Tone.Vibrato(4, 0.1).toDestination();
+violinSynth.connect(vibrato);
+violinSynth.volume.value = -8;
+
+// Secret button - Toggle Chinese mode
+secretBtn.addEventListener('click', async () => {
+  if (!audioStarted) {
+    await Tone.start();
+    audioStarted = true;
+  }
+  
+  chineseMode = !chineseMode;
+  document.body.classList.toggle('chinese-mode', chineseMode);
+  
+  const lang = chineseMode ? 'zh' : 'en';
+  gameTitle.textContent = translations[lang].title;
+  scoreLabel.textContent = translations[lang].scoreLabel;
+  instructions.textContent = translations[lang].instructions;
+  
+  // Play/stop background music
+  if (chineseMode) {
+    // Play your audio file here
+    if (!backgroundMusic) {
+      backgroundMusic = new Tone.Player({
+        url: "img/redsun.mp3",
+        loop: true,
+        autostart: true,
+        volume: -10
+      }).toDestination();
+    } else {
+      backgroundMusic.start();
+    }
+  } else {
+    if (backgroundMusic) {
+      backgroundMusic.stop();
+    }
+  }
+});
+
+// Classic Plinko setup
+const pegRadius = 8;
+const chipRadius = 12;
+const rows = 12;
+const cols = 9;
+const pegSpacing = 60;
+const startY = 80;
+const startX = canvas.width / 2;
+
+// Create pegs in triangular pattern
+const pegs = [];
+for (let row = 0; row < rows; row++) {
+  for (let col = 0; col <= row; col++) {
+    const x = startX - (row / 2) * pegSpacing + col * pegSpacing;
+    const y = startY + row * pegSpacing;
+    if (x > 20 && x < canvas.width - 20) {
+      pegs.push({ x, y, hit: false });
+    }
+  }
+}
+
+// Slots at bottom - classic Plinko values
+const numSlots = 9;
+const slotWidth = canvas.width / numSlots;
+const slotValues = [100, 500, 1000, 0, 10000, 0, 1000, 500, 100];
+
+// Create slot display
+slotValues.forEach((val) => {
+  const slot = document.createElement('div');
+  slot.className = 'slot-value';
+  slot.textContent = val;
+  slotsDisplay.appendChild(slot);
+});
+
+// Chip physics
+const chips = [];
+const gravity = 0.4;
+const bounce = 0.6;
+
+class Chip {
+  constructor(x) {
+    this.x = x;
+    this.y = 30;
+    this.vx = (Math.random() - 0.5) * 1;
+    this.vy = 0;
+    this.radius = chipRadius;
+    this.color = '#FFD700';
+    this.active = true;
+    this.lastPegHit = null;
+  }
+  
+  update() {
+    if (!this.active) return;
+    
+    this.vy += gravity;
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // Check peg collisions
+    pegs.forEach(peg => {
+      if (peg === this.lastPegHit) return;
+      
+      const dx = this.x - peg.x;
+      const dy = this.y - peg.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < this.radius + pegRadius) {
+        // Collision!
+        const angle = Math.atan2(dy, dx);
+        const targetX = peg.x + Math.cos(angle) * (this.radius + pegRadius);
+        const targetY = peg.y + Math.sin(angle) * (this.radius + pegRadius);
+        
+        this.x = targetX;
+        this.y = targetY;
+        
+        // Bounce
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const dotProduct = this.vx * nx + this.vy * ny;
+        this.vx = (this.vx - 2 * dotProduct * nx) * bounce;
+        this.vy = (this.vy - 2 * dotProduct * ny) * bounce;
+        
+        // Play violin note
+        if (audioStarted) {
+          const notes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'];
+          const note = notes[Math.floor(Math.random() * notes.length)];
+          violinSynth.triggerAttackRelease(note, '8n');
+        }
+        
+        // Visual feedback
+        peg.hit = true;
+        setTimeout(() => peg.hit = false, 200);
+        
+        this.lastPegHit = peg;
+      }
+    });
+    
+    // Wall bounce
+    if (this.x < this.radius) {
+      this.x = this.radius;
+      this.vx *= -bounce;
+    }
+    if (this.x > canvas.width - this.radius) {
+      this.x = canvas.width - this.radius;
+      this.vx *= -bounce;
+    }
+    
+    // Bottom - score!
+    if (this.y > canvas.height - 50) {
+      this.active = false;
+      const slotIndex = Math.floor(this.x / slotWidth);
+      const clampedIndex = Math.max(0, Math.min(numSlots - 1, slotIndex));
+      const points = slotValues[clampedIndex];
+      score += points;
+      scoreEl.textContent = score;
+      
+      // Play violin chord for landing
+      if (audioStarted) {
+        violinSynth.triggerAttackRelease(['E4', 'G4', 'B4'], '4n');
+      }
+      
+      // Flash slot
+      const slotEl = slotsDisplay.children[clampedIndex];
+      slotEl.style.transform = 'scale(1.2)';
+      slotEl.style.background = 'linear-gradient(180deg, #ffd700 0%, #ff6b00 100%)';
+      setTimeout(() => {
+        slotEl.style.transform = 'scale(1)';
+        slotEl.style.background = 'linear-gradient(180deg, #ff6b00 0%, #c41e3a 100%)';
+      }, 300);
+    }
+  }
+  
+  draw() {
+    if (!this.active) return;
+    
+    // Chip shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.beginPath();
+    ctx.arc(this.x + 3, this.y + 3, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Chip - classic gold color
+    const gradient = ctx.createRadialGradient(
+      this.x - 4, this.y - 4, 2,
+      this.x, this.y, this.radius
+    );
+    gradient.addColorStop(0, '#FFF9E6');
+    gradient.addColorStop(0.5, '#FFD700');
+    gradient.addColorStop(1, '#B8860B');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Chip border
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Click to drop chip
+canvas.addEventListener('click', async (e) => {
+  if (!audioStarted) {
+    await Tone.start();
+    audioStarted = true;
+  }
+  
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  
+  if (e.clientY - rect.top < 60) {
+    chips.push(new Chip(x));
+  }
+});
+
+// Draw game
+function draw() {
+  // Classic wooden background
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGradient.addColorStop(0, '#8B4513');
+  bgGradient.addColorStop(1, '#654321');
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Wood grain effect
+  ctx.strokeStyle = 'rgba(101, 67, 33, 0.3)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < canvas.height; i += 5) {
+    ctx.beginPath();
+    ctx.moveTo(0, i);
+    ctx.lineTo(canvas.width, i + Math.sin(i * 0.1) * 2);
+    ctx.stroke();
+  }
+  
+  // Drop zone
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+  ctx.fillRect(0, 0, canvas.width, 60);
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, canvas.width, 60);
+  
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px Roboto';
+  ctx.textAlign = 'center';
+  ctx.fillText('▼ DROP ZONE ▼', canvas.width / 2, 35);
+  
+  // Draw pegs - classic metal pins
+  pegs.forEach(peg => {
+    // Peg glow when hit
+    if (peg.hit) {
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+      ctx.beginPath();
+      ctx.arc(peg.x, peg.y, pegRadius * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Metal peg gradient
+    const pegGradient = ctx.createRadialGradient(
+      peg.x - 2, peg.y - 2, 1,
+      peg.x, peg.y, pegRadius
+    );
+    pegGradient.addColorStop(0, '#E8E8E8');
+    pegGradient.addColorStop(0.5, '#C0C0C0');
+    pegGradient.addColorStop(1, '#808080');
+    
+    ctx.fillStyle = pegGradient;
+    ctx.beginPath();
+    ctx.arc(peg.x, peg.y, pegRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Peg border
+    ctx.strokeStyle = '#404040';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+  
+  // Draw slot dividers
+  ctx.strokeStyle = '#4a2511';
+  ctx.lineWidth = 4;
+  for (let i = 0; i <= numSlots; i++) {
+    const x = i * slotWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, canvas.height - 50);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  
+  // Draw slot values on canvas
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 18px Roboto';
+  ctx.textAlign = 'center';
+  slotValues.forEach((val, i) => {
+    const x = i * slotWidth + slotWidth / 2;
+    ctx.fillText(val, x, canvas.height - 20);
+  });
+  
+  // Update and draw chips
+  chips.forEach(chip => {
+    chip.update();
+    chip.draw();
+  });
+  
+  // Remove inactive chips
+  for (let i = chips.length - 1; i >= 0; i--) {
+    if (!chips[i].active && chips[i].y > canvas.height + 50) {
+      chips.splice(i, 1);
+    }
+  }
+  
+  requestAnimationFrame(draw);
+}
+
+// Start animation
+draw();
+</script>
+</script>
+</body>
+</html>

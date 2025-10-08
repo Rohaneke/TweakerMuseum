@@ -1,0 +1,80 @@
+/* Styling for the Art Carousel page */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #0b1220 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  color: #e6eef8;
+}
+
+/* Container sizing and visual treatment */
+#artCarousel {
+  width: min(900px, 90%);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(2,6,23,0.65);
+  background-color: #000;
+}
+
+.carousel-inner {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Make images fill the carousel while preserving aspect ratio */
+.carousel-item img {
+  width: 100%;
+  height: 60vh;
+  object-fit: cover; /* crop and fill */
+  display: block;
+}
+
+/* Controls sizing and contrast */
+.carousel-control-prev,
+.carousel-control-next {
+  width: 5%;
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  background-size: 2.2rem 2.2rem;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+}
+
+/* Make the control hit targets easier to tap on mobile */
+.carousel-control-prev,
+.carousel-control-next {
+  padding: 1rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .carousel-item img {
+    height: 50vh;
+  }
+}
+
+@media (max-width: 480px) {
+  #artCarousel {
+    width: 98%;
+  }
+  .carousel-item img {
+    height: 40vh;
+  }
+}
+
+/* Small visual polish for accessibility */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap; /* added for Edge */
+  border: 0;
+}
