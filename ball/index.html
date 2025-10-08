@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play a Tune</title>
+    <!-- Use the UMD build to expose a global `Tone` variable in browsers -->
+    <script src="https://cdn.jsdelivr.net/npm/tone/build/Tone.js"></script>
+</head>
+<body>
+    <!-- Controls (overlay) -->
+    <div id="controls" style="position:fixed;top:12px;left:12px;z-index:100;background:rgba(0,0,0,0.35);backdrop-filter:blur(6px);padding:8px;border-radius:8px;display:flex;gap:8px;align-items:center">
+        <strong style="color:#fff;font-size:14px;margin-right:6px">Play a Tune</strong>
+        <button id="playButton">Play</button>
+        <button id="stopButton">Stop</button>
+        <label style="color:#fff;margin-left:6px">Refresh the page to restart upon finishing</label>
+    </div>
+
+    <!-- Fullscreen visualizer canvas -->
+    <canvas id="viz" style="position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:1"></canvas>
+
+    <script>
+        // Simulation + audio (visualizer removed)
+        let initialized = false;
+        let leadSynth, bassSynth, kickSynth, snareSynth, hatSynth;
+        let melody = [];
+        let loopSeconds = 0;
+        let playLoop = null; // Tone.Loop used when ball fills circle
+
+        // Ball/circle physics
+        // increase initial horizontal speed and give an upward launch so gravity produces repeated bounces
+        const ball = { x: 0, y: 0, vx: 260, vy: -220, r: 12 };
+        let circle = { x: 0, y: 0, r: 0 };
+        let wasColliding = false;
+        const growPerCollision = 6; // px per collision
+        let lastSimTime = null;
+        let infinitePlay = false;
+        // whether the ball is active (visible and simulated). Starts false until Play.
+        let ballActive = false;
+
+        // tempo and timing
+        const tempo = 120;
+        Tone.Transport.bpm.value = tempo;
+        const stepSeconds = (60 / tempo) * 0.25; // 16th note
+        // gravity (px/s^2) and restitution to make bounces livelier
+        const gravity = 700; // downward acceleration in px/s^2
+        const restitution = 1.02; // slightly >1 gives more energetic bounces (set <=1 for realistic)
+        // Maximum ball size limits to avoid runaway growth/crashes
+        const MAX_BALL_RATIO = 0.95; // relative cap (95% of circle radius)
+        const MAX_BALL_PIXELS = 800; // absolute maximum radius in pixels to prevent crashes
+        const MAX_SPEED = 3000; // absolute speed cap (px/s) to prevent runaway velocities
+
+        // The user-provided note sequence
+        const rawSequence = "D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – D – A – G# – G – F – D – F – G – F – F – F – F – F – G – F – F – F – F – G – G# – G – F – D – F – G – F – F – F – G – G# – A – C – A – D – D – D – A – D – C – G – F+A – F+A – F+A – F+A – F+A – D+G – D+G – F+A – F+A – F+A – F+A – F+A – G – D – A – G – D – A – G – D – C – G – F – E – D – E – F – A – C";
+        const tokens = rawSequence.split(/\s*[–-]\s*/).map(t => t.replace(/\.+$/, '').trim()).filter(Boolean);
+        melody = tokens.map(tok => tok.includes('+') ? tok.split('+').map(n => n.trim() + '5') : tok + '5');
+        loopSeconds = melody.length * stepSeconds;
+
+        // Canvas setup
+        const canvas = document.getElementById('viz');
+        const ctx = canvas.getContext('2d');
+        function resize() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            canvas.width = Math.round(w * devicePixelRatio);
+            canvas.height = Math.round(h * devicePixelRatio);
+            ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // helper to reset/place the ball when Play is pressed
+        function resetBall() {
+            const width = canvas.width / devicePixelRatio;
+            const height = canvas.height / devicePixelRatio;
+            // place ball slightly off-center to avoid immediate repeated sticking collisions
+            ball.x = width / 2 + 10;
+            ball.y = height / 2;
+            ball.vx = 260; // initial speed matched to earlier constant
+            ball.vy = -220;
+            ball.r = 12;
+            wasColliding = false;
+            lastSimTime = null;
+            infinitePlay = false;
+            // stop any existing continuous motif
+            if (playLoop) { playLoop.stop(); playLoop = null; }
+        }
+
+        // Natural bounce helper: reflect velocity v across normal (nx,ny)
+        function reflect(vx, vy, nx, ny) {
+            const dot = vx * nx + vy * ny;
+            return { vx: vx - 2 * dot * nx, vy: vy - 2 * dot * ny };
+        }
+
+        // Prevent tunneling: if ball moved from inside to outside past boundary, compute intersection
+        function correctTunneling(prevX, prevY, x, y, r, cx, cy, cr) {
+            // Approximate by moving back along motion vector until just inside
+            const dx = x - prevX, dy = y - prevY;
+            let t0 = 0, t1 = 1;
+            for (let i = 0; i < 10; i++) {
+                const t = (t0 + t1) / 2;
+                const px = prevX + dx * t, py = prevY + dy * t;
+                const dist = Math.hypot(px - cx, py - cy);
+                if (dist + r > cr) t1 = t; else t0 = t;
+            }
+            const t = t0;
+            return { x: prevX + dx * t, y: prevY + dy * t };
+        }
+
+        // Initialize audio synths (called on first Play)
+        function initAudio() {
+            // lead synth
+            leadSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.002, decay: 0.06, sustain: 0.2, release: 0.06 }
+            }).toDestination();
+
+            // bass synth for stronger collisions
+            bassSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.005, decay: 0.12, sustain: 0.3, release: 0.12 }
+            }).toDestination();
+
+            kickSynth = new Tone.MembraneSynth({ pitchDecay: 0.04, envelope: { attack: 0.001, decay: 0.22, sustain: 0 } }).toDestination();
+            snareSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.12, sustain: 0 } }).toDestination();
+            hatSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.03, sustain: 0 } }).toDestination();
+        }
+
+        // Play a bounce sound based on collision intensity and advance melody index
+        let bounceIndex = 0;
+        function playBounceSound(intensity) {
+            // intensity is based on pre-collision speed magnitude
+            const note = melody[bounceIndex % melody.length];
+            bounceIndex++;
+
+            // play lead note (short)
+            if (Array.isArray(note)) {
+                leadSynth.triggerAttackRelease(note, '16n');
+            } else {
+                leadSynth.triggerAttackRelease(note, '16n');
+            }
+
+            // play percussion depending on intensity
+            if (intensity > 180) {
+                kickSynth.triggerAttackRelease('C1', '8n');
+                // add a low bass thump for very strong hits
+                if (intensity > 260) bassSynth.triggerAttackRelease('E2', '4n');
+            } else if (intensity > 110) {
+                snareSynth.triggerAttackRelease('8n');
+            } else {
+                hatSynth.triggerAttackRelease('16n');
+            }
+        }
+
+        // When ball fills circle, start a continuous motif loop
+        function startInfiniteLoop() {
+            if (playLoop) return;
+            // play a simple motif stepping through melody every 8th note
+            let i = 0;
+            playLoop = new Tone.Loop(time => {
+                const note = melody[i % melody.length];
+                if (Array.isArray(note)) leadSynth.triggerAttackRelease(note, '8n', time);
+                else leadSynth.triggerAttackRelease(note, '8n', time);
+                i++;
+            }, '8n').start(0);
+            Tone.Transport.start();
+        }
+
+        // Play button
+        document.getElementById('playButton').addEventListener('click', async () => {
+            if (!initialized) {
+                await Tone.start();
+                initAudio();
+                initialized = true;
+            }
+            // make the ball appear and start simulating
+            resetBall();
+            ballActive = true;
+            // If previously loop was created and loopToggle is off, stop it
+            const loopToggle = document.getElementById('loopToggle').checked;
+            if (!loopToggle && playLoop) {
+                playLoop.stop(); playLoop = null; Tone.Transport.stop();
+            }
+        });
+
+        // Stop button stops transport and clears loop (force reset)
+        document.getElementById('stopButton').addEventListener('click', () => {
+            // hide and disable the ball simulation immediately
+            ballActive = false;
+            // stop and dispose any continuous motif
+            if (playLoop) { try { playLoop.stop(); } catch (e) {} playLoop = null; }
+            // reset ball to safe defaults so it won't reappear accidentally
+            ball.r = 12; ball.vx = 0; ball.vy = 0;
+            // stop audio transport
+            try { Tone.Transport.stop(); } catch (e) {}
+        });
+
+        // Main draw + simulation loop
+        (function mainLoop() {
+            let last = performance.now();
+            function frame() {
+                const now = performance.now();
+                const dt = Math.min(0.04, (now - last) / 1000); // clamp dt to avoid big jumps
+                last = now;
+
+                // canvas size in CSS pixels
+                const width = canvas.width / devicePixelRatio;
+                const height = canvas.height / devicePixelRatio;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#0b0b0b';
+                ctx.fillRect(0, 0, width, height);
+
+                // circle
+                const cX = width / 2, cY = height / 2;
+                const cR = Math.min(width, height) * 0.38;
+                circle.x = cX; circle.y = cY; circle.r = cR;
+
+                // only simulate & draw the ball when active
+                if (ballActive) {
+                    // integrate position with small substeps to reduce tunneling and improve stability
+                    const steps = Math.max(1, Math.ceil((Math.abs(ball.vx) + Math.abs(ball.vy)) * dt / 30));
+                    for (let s = 0; s < steps; s++) {
+                        const subDt = dt / steps;
+                        const prevX = ball.x, prevY = ball.y;
+                        // apply gravity per substep for natural falling
+                        ball.vy += gravity * subDt;
+                        ball.x += ball.vx * subDt;
+                        ball.y += ball.vy * subDt;
+
+                        // detect collision: if outside circle
+                        const dx = ball.x - circle.x, dy = ball.y - circle.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist + ball.r > circle.r) {
+                            // Correct tunneling if needed
+                            const corrected = correctTunneling(prevX, prevY, ball.x, ball.y, ball.r, circle.x, circle.y, circle.r);
+                            ball.x = corrected.x; ball.y = corrected.y;
+
+                            // recompute normal
+                            const ndx = ball.x - circle.x, ndy = ball.y - circle.y;
+                            const ndist = Math.hypot(ndx, ndy) || 1;
+                            const nx = ndx / ndist, ny = ndy / ndist;
+
+                            // reflect velocity
+                            const preSpeed = Math.hypot(ball.vx, ball.vy);
+                            const refl = reflect(ball.vx, ball.vy, nx, ny);
+                            // apply restitution to normal/reflected velocity (slightly >1 for livelier bounces)
+                            ball.vx = refl.vx * restitution;
+                            ball.vy = refl.vy * restitution;
+
+                            // add more tangential randomness so bounces change direction more often
+                            const tangentFactor = 0.2;
+                            const tangential = { x: -ny, y: nx };
+                            const spin = (Math.random() - 0.5) * tangentFactor * preSpeed * 0.03;
+                            ball.vx += tangential.x * spin;
+                            ball.vy += tangential.y * spin;
+
+                            // slight global damping (kept high so it bounces often)
+                            ball.vx *= 0.995; ball.vy *= 0.995;
+
+                            // ensure ball is just inside boundary
+                            const pushback = circle.r - (Math.hypot(ball.x - circle.x, ball.y - circle.y) + ball.r);
+                            if (pushback < 0) {
+                                ball.x += nx * pushback; ball.y += ny * pushback;
+                            }
+
+                            // on first frame of collision, play sound and grow (clamped)
+                            if (!wasColliding) {
+                                const intensity = preSpeed; // use pre-collision speed as intensity
+                                if (initialized) playBounceSound(intensity);
+
+                                // clamp growth so ball never exceeds both the ratio cap and the absolute pixel cap
+                                const maxByRatio = Math.max(8, circle.r * MAX_BALL_RATIO);
+                                const maxBall = Math.min(maxByRatio, MAX_BALL_PIXELS);
+                                const newRadius = Math.min(ball.r + growPerCollision, maxBall);
+                                ball.r = newRadius;
+
+                                // if ball reached the max allowed size, start infinite loop
+                                if (!infinitePlay && newRadius >= maxBall) {
+                                    infinitePlay = true;
+                                    if (document.getElementById('loopToggle').checked) startInfiniteLoop();
+                                }
+                            }
+                            wasColliding = true;
+                        } else {
+                            wasColliding = false;
+                        }
+                    }
+                }
+
+                // simple global damping to keep simulation bounded
+                ball.vx *= 0.9992; ball.vy *= 0.9992;
+
+                // safety clamps to avoid runaway values that crash the page
+                // cap velocity magnitude
+                const speed = Math.hypot(ball.vx, ball.vy);
+                if (speed > MAX_SPEED) {
+                    const scale = MAX_SPEED / speed;
+                    ball.vx *= scale; ball.vy *= scale;
+                }
+                // hard clamp radius to absolute maximum
+                if (ball.r > MAX_BALL_PIXELS) ball.r = MAX_BALL_PIXELS;
+
+                // if either radius or speed still dangerously large, forcibly stop and hide the ball
+                if (ball.r >= MAX_BALL_PIXELS || Math.hypot(ball.vx, ball.vy) >= MAX_SPEED) {
+                    // hide simulation to prevent browser instability
+                    ballActive = false;
+                    if (playLoop) { try { playLoop.stop(); } catch (e) {} playLoop = null; }
+                    try { Tone.Transport.stop(); } catch (e) {}
+                }
+
+                // draw circle
+                ctx.beginPath(); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI*2); ctx.stroke();
+
+                // draw ball only when active
+                if (ballActive) {
+                    ctx.beginPath();
+                    const grad = ctx.createRadialGradient(ball.x - ball.r*0.3, ball.y - ball.r*0.3, Math.max(1, ball.r*0.1), ball.x, ball.y, ball.r);
+                    grad.addColorStop(0, '#fff'); grad.addColorStop(0.2, '#ffd47a'); grad.addColorStop(1, '#ff6b6b');
+                    ctx.fillStyle = grad; ctx.arc(ball.x, ball.y, Math.max(2, ball.r), 0, Math.PI*2); ctx.fill();
+                    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.stroke();
+                }
+
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+</html>
