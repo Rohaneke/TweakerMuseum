@@ -1,37 +1,56 @@
-let stars = [];
-let planets = [];
-let story = [];
-let startTime;
-let speed;
+// Create a separate p5 instance for lightspeed to avoid conflicts with p5rohan.js
+const lightspeedSketch = (p) => {
+  let stars = [];
+  let planets = [];
+  let story = [];
+  let startTime;
+  let speed;
 
-function setup() {
-  const canvas = createCanvas(250, 500);
-  canvas.parent("art-container"); // Attach canvas to a styled container
+  p.setup = () => {
+    // Always attach to #p5-canvas and match its size
+    const hero = document.getElementById("p5-canvas");
+    let w = hero ? hero.offsetWidth : window.innerWidth;
+    let h = hero ? hero.offsetHeight : window.innerHeight * 0.7;
+    
+    const canvas = p.createCanvas(w, h);
+    if (hero) {
+      canvas.parent(hero);
+    } else {
+      canvas.parent(document.body);
+    }
 
-  // create stars
-  for (let i = 0; i < 1000; i++) {
-    stars[i] = new Star();
-  }
+    // Responsive resize
+    window.addEventListener('resize', () => {
+      const heroDiv = document.getElementById('p5-canvas');
+      let w = heroDiv ? heroDiv.offsetWidth : window.innerWidth;
+      let h = heroDiv ? heroDiv.offsetHeight : window.innerHeight * 0.7;
+      p.resizeCanvas(w, h);
+    });
 
-  // create planets
-  for (let i = 0; i < 323; i++) {
-    planets[i] = new Planet();
-  }
+    // create stars
+    for (let i = 0; i < 1000; i++) {
+      stars[i] = new Star(p);
+    }
 
-  // story text (timeline of events)
-  story = [
-    "PRaise skibidi. certified swagaholic ",
-    "Glory to the Red Star",
-    "TAKE FENT FOR skibidi.",
-    "WWE are all one people under the Red Star with FENT.",
-    "skibidi is our light in the darkness.",
-    "The Red Star will guide us to a new dawn.",
-    "In skibidi we trust, in FENT we find strength.",
-    "Together we rise under the banner of skibidi.",
-  ];
+    // create planets
+    for (let i = 0; i < 323; i++) {
+      planets[i] = new Planet(p);
+    }
 
-  startTime = millis();
-}
+    // story text (timeline of events)
+    story = [
+      "PRaise skibidi. certified swagaholic ",
+      "Glory to the Red Star",
+      "TAKE FENT FOR skibidi.",
+      "WWE are all one people under the Red Star with FENT.",
+      "skibidi is our light in the darkness.",
+      "The Red Star will guide us to a new dawn.",
+      "In skibidi we trust, in FENT we find strength.",
+      "Together we rise under the banner of skibidi.",
+    ];
+
+    startTime = p.millis();
+  };
 
 function draw() {
   background(5, 15, 20); // deep space blue/black
@@ -195,40 +214,5 @@ class Planet {
   }
 }
 
-// Add a styled container for the canvas and list
-const container = document.createElement("div");
-container.id = "art-container";
-container.style.cssText = `
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #f5f5dc;
-  border: 10px solid #8b4513;
-  padding: 20px;
-  margin: 20px auto;
-  width: 300px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-`;
-document.body.appendChild(container);
-
-const list = document.createElement("ul");
-list.style.cssText = `
-  list-style: none;
-  padding: 0;
-  margin-top: 20px;
-  font-family: 'Times New Roman', Times, serif;
-  font-size: 16px;
-  color: #333;
-`;
-
 story.forEach((line) => {
-  const listItem = document.createElement("li");
-  listItem.textContent = line;
-  listItem.style.cssText = `
-    margin-bottom: 10px;
-    text-align: center;
-  `;
-  list.appendChild(listItem);
-});
 
-container.appendChild(list);
